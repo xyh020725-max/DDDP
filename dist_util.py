@@ -14,19 +14,30 @@
 #
 # This repository was forked from https://github.com/openai/guided-diffusion, which is under the MIT license
 
-import yaml
-import os
-from PIL import Image
+"""
+Helpers for distributed training.
+"""
+
+import io
+
+import blobfile as bf
+import torch as th
 
 
-def txtread(path):
-    path = os.path.expanduser(path)
-    with open(path, 'r') as f:
-        return f.read()
+def dev(device):
+    """
+    Get the device to use for torch.distributed.
+    """
+    if device is None:
+        if th.cuda.is_available():
+            return th.device(f"cuda")
+        return th.device("cpu")
+    return th.device(device)
 
 
-def yamlread(path):
-    return yaml.safe_load(txtread(path=path))
+def load_state_dict(path, backend=None, **kwargs):
+    with bf.BlobFile(path, "rb") as f:
+        data = f.read()
+    return th.load(io.BytesIO(data), **kwargs)
 
-def imwrite(path=None, img=None):
-    Image.fromarray(img).save(path)
+
